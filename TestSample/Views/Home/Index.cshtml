@@ -1,0 +1,81 @@
+﻿@{
+    ViewData["Title"] = "Grid";
+}
+
+
+<ejs-grid id="Grid" allowPaging="true" actionBegin="actionBegin"  actionComplete="actionComplete" toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel" })">
+    <e-data-manager id="myData" url="/api/Orders" adaptor="WebApiAdaptor" crossDomain="true"></e-data-manager>
+    <e-grid-editSettings allowAdding="true" allowDeleting="true" allowEditing="true" mode="Dialog" template='#dialogtemplate'></e-grid-editSettings>
+    <e-grid-columns>
+        <e-grid-column field="OrderID" headerText="Order ID" isPrimaryKey="true" textAlign="Right" width="120"></e-grid-column>
+        <e-grid-column field="EmployeeID" headerText="Employee Name"  foreignKeyField="EmployeeID" foreignKeyValue="CustomerID" dataSource="@(new Syncfusion.EJ2.DataManager() { Url = "/api/Employee", Adaptor = "WebApiAdaptor"})" width="150"></e-grid-column>
+        <e-grid-column field="ShipCity" headerText="Ship City" width="170"></e-grid-column>
+        <e-grid-column field="ShipCountry" headerText="Ship Country" width="150"></e-grid-column>
+    </e-grid-columns>
+</ejs-grid>
+
+<script id='dialogtemplate' type="text/x-template">
+    <div id="dialogTemp">
+    </div>
+</script>
+
+<script type="text/javascript">
+    function actionComplete(args) {
+
+         if (args.requestType === 'beginEdit' || args.requestType === 'add') {
+                let spinner = ej.popups.createSpinner({ target: args.dialog.element });
+                ej.popups.showSpinner(args.dialog.element);
+             if (args.requestType === 'beginEdit') {
+                    var ajax = new ej.base.Ajax({
+                        url: "@Url.Action("Editpartial", "Home")", //render the partial view
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({ value: args.rowData })
+                    });
+                    ajax.send().then(function (data) {
+                        appendElement(data, args.form); //Render the edit form with selected record
+                        args.form.elements.namedItem('EmployeeID')[1].focus();
+                        setTimeout((e) => { ej.popups.hideSpinner(args.dialog.element) }, 100);
+                    }).catch(function (xhr) {
+                        console.log(xhr);
+                        ej.popups.hideSpinner(args.dialog.element);
+                    });
+                }
+             if (args.requestType === 'add') {
+                 args.form.ej2_instances[0].addRules("ShipCountry", { required: true })
+                    var ajax = new ej.base.Ajax({
+                        url: "@Url.Action("Addpartial","Home")", //render the partial view
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({ value: args.rowData })
+                    });
+                    ajax.send().then(function (data) {
+                        appendElement(data, args.form); //Render the edit form with selected record
+                        args.form.elements.namedItem('OrderID').focus();
+                        ej.popups.hideSpinner(args.dialog.element);
+                    }).catch(function (xhr) {
+                        console.log(xhr);
+                        //ej.popups.hideSpinner(args.dialog.element);
+                    });
+                }
+            }
+    }
+
+    function actionBegin(args) {
+        if (args.requestType === 'save') {
+            alert(args.rowData.EmployeeID);
+            console.log('Updated:' + args.data.EmployeeID);
+            console.log('Previous value:' + args.previousData.EmployeeID);
+        }
+    }
+
+    function appendElement(elementString, form) {
+        form.querySelector("#dialogTemp").innerHTML = elementString;
+        var script = document.createElement('script');
+        script.type = "text/javascript";
+        var serverScript = form.querySelector("#dialogTemp").querySelector('script');
+        script.textContent = serverScript.innerHTML;
+        document.head.appendChild(script);
+        serverScript.remove();
+    }
+</script>
